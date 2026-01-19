@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSU Course Planner</title>
+    <style>
+        :root {
+            --nsu-blue: #003366;
+            --nsu-gold: #FFD700;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* --- Header --- */
+        header {
+            background: linear-gradient(135deg, var(--nsu-blue), #004080);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .brand h1 { font-size: 1.5rem; letter-spacing: 1px; }
+        .brand span { color: var(--nsu-gold); }
+        .clock-widget { text-align: right; font-size: 0.9rem; font-weight: 500; }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        h2 { font-size: 1.2rem; margin-bottom: 15px; color: var(--nsu-blue); border-bottom: 2px solid #eee; padding-bottom: 8px; }
+
+        /* --- Inputs & Forms --- */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        button.btn-primary {
+            width: 100%;
+            background-color: var(--nsu-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.btn-primary:hover { background-color: #002244; }
+
+        /* --- Progress Section --- */
+        .progress-stats { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
+        .progress-bar-bg { background: #e9ecef; height: 25px; border-radius: 15px; overflow: hidden; margin-bottom: 10px; }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--nsu-blue), #0056b3);
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        /* --- Pacing Estimator (Updated for 3 columns) --- */
+        .pacing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .pacing-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #ddd; }
+        .pacing-box h4 { font-size: 0.85rem; color: #666; margin-bottom: 5px; }
+        .pacing-box .stat { font-size: 1.3rem; font-weight: bold; color: var(--nsu-blue); }
+        .pacing-box small { font-size: 0.7rem; color: #888; display: block; margin-top: 2px; }
+
+        /* Highlight the 'Standard' track slightly */
+        .pacing-box.standard { border-color: var(--nsu-blue); background: #f0f4ff; }
+
+        /* --- Course List --- */
+        .course-list { max-height: 500px; overflow-y: auto; }
+        .course-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .course-info { display: flex; gap: 15px; }
+        .course-code { font-weight: bold; color: var(--nsu-blue); }
+        .course-cr { background: #eee; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; }
+        
+        .btn-delete {
+            background: #ffebee;
+            color: var(--danger);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* --- Footer --- */
+        footer {
+            background: #222;
+            color: #ccc;
+            text-align: center;
+            padding: 20px;
+            margin-top: auto;
+            font-size: 0.9rem;
+        }
+        footer a { color: var(--nsu-gold); text-decoration: none; font-weight: bold; }
+        footer a:hover { text-decoration: underline; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+            .pacing-grid { grid-template-columns: 1fr; } /* Stack vertically on mobile */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>NSU <span>Planner</span></h1>
+        </div>
+        <div class="clock-widget" id="clock">
+            </div>
+    </header>
+
+    <div class="container">
+        
+        <aside>
+            <div class="card">
+                <h2>Student Profile</h2>
+                <div class="form-group">
+                    <label>Select Department</label>
+                    <select id="deptSelect" onchange="updateDepartment()">
+                        <option value="130">CSE (130 Credits)</option>
+                        <option value="130">EEE (130 Credits)</option>
+                        <option value="148">Civil - CE (148 Credits)</option>
+                        <option value="130">Law - LLB (130 Credits)</option>
+                        <option value="124">BBA (124 Credits)</option>
+                        <option value="167">Architecture (167 Credits)</option>
+                        <option value="120">Pharmacy (120 Credits)</option>
+                        <option value="120">English (120 Credits)</option>
+                        <option value="125">Economics (125 Credits)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Completed Semesters (Approx)</label>
+                    <select id="semestersDone" onchange="render()">
+                        <option value="0">Just Started (0)</option>
+                        <option value="1">1 Semester Done</option>
+                        <option value="2">2 Semesters Done</option>
+                        <option value="3">3 Semesters Done</option>
+                        <option value="4">4 Semesters Done</option>
+                        <option value="5">5 Semesters Done</option>
+                        <option value="6">6 Semesters Done</option>
+                        <option value="7">7 Semesters Done</option>
+                        <option value="8">8 Semesters Done</option>
+                        <option value="9">9+ Semesters Done</option>
+                    </select>
+                    <small style="color:#666; font-size:0.8em">Used to calculate remaining pace.</small>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Add Completed Course</h2>
+                <div class="form-group">
+                    <label>Course Code</label>
+                    <input type="text" id="courseCode" placeholder="e.g. CEE211" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Credits</label>
+                    <input type="number" id="courseCredit" placeholder="3.0" step="0.5">
+                </div>
+                <button class="btn-primary" onclick="addCourse()">+ Add to Plan</button>
+            </div>
+        </aside>
+
+        <main>
+            <div class="card">
+                <h2>Graduation Progress</h2>
+                <div class="progress-stats">
+                    <span id="creditsCount">0 Credits Done</span>
+                    <span id="creditsTotal">130 Required</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBar" style="width: 0%;">0%</div>
+                </div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                    Total Courses Completed: <strong id="courseCount">0</strong>
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Average Load Required Per Semester</h2>
+                <p style="margin-bottom: 15px; font-size: 0.9rem; color: #555;">
+                    To graduate within the timelines below, you need to take this many credits on average for your <strong>remaining</strong> semesters.
+                </p>
+                <div class="pacing-grid">
+                    <div class="pacing-box standard">
+                        <h4>4-Year Track</h4>
+                        <div class="stat" id="pace4yr">--</div>
+                        <small>Credits / Semester</small>
+                    </div>
+                    <div class="pacing-box">
+                        <h4>5-Year Track</h4>
+                        <div class="stat" id="pace5yr">--</div>
+                        <small>Credits / Semester</small>
+                    </div>
+                    <div class="pacing-box">
+                        <h4>6-Year Track</h4>
+                        <div class="stat" id="pace6yr">--</div>
+                        <small>Credits / Semester</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>My Course List</h2>
+                <div class="course-list" id="courseListContainer">
+                    </div>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <p> <a href="https://www.facebook.com/aj.main.31" target="_blank">Ajmain Zwad</a></p>
+    </footer>
+
+    <script>
+        // --- 1. Variables & State ---
+        let totalCreditsRequired = 130;
+        let myCourses = JSON.parse(localStorage.getItem('nsuCourses')) || [];
+        
+        // --- 2. Initialization ---
+        window.onload = function() {
+            // Load saved department
+            const savedDept = localStorage.getItem('nsuDept');
+            if(savedDept) {
+                document.getElementById('deptSelect').value = savedDept;
+                totalCreditsRequired = parseInt(savedDept);
+            }
+
+            // Load saved semester count if any
+            const savedSem = localStorage.getItem('nsuSemesters');
+            if(savedSem) {
+                document.getElementById('semestersDone').value = savedSem;
+            }
+
+            render();
+            updateClock();
+            setInterval(updateClock, 1000);
+        };
+
+        // --- 3. Core Functions ---
+
+        // Update Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerHTML = 
+                now.toLocaleTimeString() + "<br>" + 
+                "<span style='opacity:0.8; font-size:0.8em'>" + now.toDateString() + "</span>";
+        }
+
+        // Change Department
+        function updateDepartment() {
+            const select = document.getElementById('deptSelect');
+            totalCreditsRequired = parseInt(select.value);
+            localStorage.setItem('nsuDept', totalCreditsRequired);
+            render();
+        }
+
+        // Add Course
+        function addCourse() {
+            const codeInput = document.getElementById('courseCode');
+            const creditInput = document.getElementById('courseCredit');
+            
+            const code = codeInput.value.trim().toUpperCase();
+            const credit = parseFloat(creditInput.value);
+
+            if (!code || isNaN(credit)) {
+                alert("Please enter both a valid Course Code and Credit value.");
+                return;
+            }
+
+            myCourses.push({ id: Date.now(), code: code, credit: credit });
+            saveData();
+            
+            // Clear inputs
+            codeInput.value = '';
+            creditInput.value = '';
+            render();
+        }
+
+        // Delete Course
+        function deleteCourse(id) {
+            myCourses = myCourses.filter(course => course.id !== id);
+            saveData();
+            render();
+        }
+
+        // Save to Local Storage
+        function saveData() {
+            localStorage.setItem('nsuCourses', JSON.stringify(myCourses));
+        }
+
+        // --- 4. Render / Update UI ---
+        function render() {
+            // Save Semester Choice
+            const semDone = parseInt(document.getElementById('semestersDone').value);
+            localStorage.setItem('nsuSemesters', semDone);
+
+            // Calculations
+            const creditsDone = myCourses.reduce((sum, course) => sum + course.credit, 0);
+            const percentage = Math.min((creditsDone / totalCreditsRequired) * 100, 100).toFixed(1);
+            const creditsLeft = Math.max(totalCreditsRequired - creditsDone, 0);
+
+            // Update Progress Bar
+            document.getElementById('creditsCount').innerText = `${creditsDone} Credits Done`;
+            document.getElementById('creditsTotal').innerText = `${totalCreditsRequired} Required`;
+            
+            const bar = document.getElementById('progressBar');
+            bar.style.width = `${percentage}%`;
+            bar.innerText = `${percentage}%`;
+            
+            if(percentage >= 100) {
+                bar.style.background = "var(--success)";
+                bar.innerText = "GRADUATED!";
+            } else {
+                bar.style.background = "linear-gradient(90deg, var(--nsu-blue), #0056b3)";
+            }
+
+            document.getElementById('courseCount').innerText = myCourses.length;
+
+            // --- PACING LOGIC ---
+            // NSU has 3 semesters per year (Spring, Summer, Fall)
+            const totalSemesters4Yr = 12; 
+            const totalSemesters5Yr = 15;
+            const totalSemesters6Yr = 18;
+
+            const remainingSem4 = Math.max(totalSemesters4Yr - semDone, 1);
+            const remainingSem5 = Math.max(totalSemesters5Yr - semDone, 1);
+            const remainingSem6 = Math.max(totalSemesters6Yr - semDone, 1);
+
+            // Calculate Load
+            let pace4 = (creditsLeft / remainingSem4).toFixed(1);
+            let pace5 = (creditsLeft / remainingSem5).toFixed(1);
+            let pace6 = (creditsLeft / remainingSem6).toFixed(1);
+
+            // Edge case: if they are already past the year limit
+            if (semDone >= totalSemesters4Yr) pace4 = "Late";
+            if (semDone >= totalSemesters5Yr) pace5 = "Late";
+
+            // If graduated
+            if (creditsLeft <= 0) {
+                pace4 = pace5 = pace6 = "Done";
+            }
+
+            document.getElementById('pace4yr').innerText = pace4;
+            document.getElementById('pace5yr').innerText = pace5;
+            document.getElementById('pace6yr').innerText = pace6;
+
+
+            // Render List
+            const listContainer = document.getElementById('courseListContainer');
+            listContainer.innerHTML = '';
+
+            if (myCourses.length === 0) {
+                listContainer.innerHTML = '<p style="color:#888; text-align:center; padding: 20px;">No courses added yet.</p>';
+            } else {
+                [...myCourses].reverse().forEach(course => {
+                    const div = document.createElement('div');
+                    div.className = 'course-item';
+                    div.innerHTML = `
+                        <div class="course-info">
+                            <span class="course-code">${course.code}</span>
+                            <span class="course-cr">${course.credit} Cr</span>
+                        </div>
+                        <button class="btn-delete" onclick="deleteCourse(${course.id})">Remove</button>
+                    `;
+                    listContainer.appendChild(div);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
